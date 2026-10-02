@@ -1,3 +1,18 @@
+## OmniPlayer v1.0.2
+
+### Fixed
+
+- **The search box shows letters in full.** Letters with tails, like j, g and y,
+  are no longer cut off at the bottom.
+
+### Improved
+
+- **The Export window closes itself** once everything has exported, and the
+  player shows where the files went. If anything fails to export, the window
+  stays open so you can see why and try again.
+
+---
+
 ## OmniPlayer v1.0.1
 
 ### Improved

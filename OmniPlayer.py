@@ -48,7 +48,7 @@ import time
 import wave
 
 APP_NAME = "OmniPlayer"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 
 DEFAULT_ALBUM = "Final Fantasy XI"
 NAMES_FILE = "bgw_names.json"
@@ -2044,8 +2044,11 @@ def run_app():
                     self.create_image(pad + 9, cy, image=self._img("search", c["dim"], 18))
                 else:
                     self.create_text(pad + 9, cy, text="⌕", fill=c["dim"])
+                # As tall as the box needs for its text (font and rounded edges),
+                # so letters with tails -- j, g, y -- are never cut off.
                 self.create_window(pad + 22, cy, anchor="w", window=self.search_entry,
-                                   width=int(ex1 - pad - 22), height=26)
+                                   width=int(ex1 - pad - 22),
+                                   height=max(26, self.search_entry.winfo_reqheight()))
             # Volume only where it fits clear of the shuffle button (the mini
             # player is usually too narrow for it).
             vx1 = w - pad - 40
@@ -4100,14 +4103,24 @@ def run_app():
 
         def _finish(self, done, failed):
             msg = "Exported %d of %d." % (done, len(self.tracks))
+            if not failed:
+                # All done: close the export window and say so in the player panel.
+                n = len(self.tracks)
+                self.app.status_var.set("Exported %d track%s to %s" % (
+                    n, "" if n == 1 else "s", self.out.get()))
+                try:
+                    self.win.destroy()
+                except tk.TclError:
+                    pass
+                return
+            # Something failed: stay open, so the problem can be seen and retried.
             try:
                 self.prog.set(msg)
                 self.go_btn.state(["!disabled"])
             except tk.TclError:
                 return            # closed while it worked
-            if failed:
-                messagebox.showerror(APP_NAME, msg + "\n\n" + "\n".join(failed[:10]),
-                                     parent=self.win)
+            messagebox.showerror(APP_NAME, msg + "\n\n" + "\n".join(failed[:10]),
+                                 parent=self.win)
 
     root = tk.Tk()
     App(root)
