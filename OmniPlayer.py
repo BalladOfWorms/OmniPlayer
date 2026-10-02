@@ -48,7 +48,7 @@ import time
 import wave
 
 APP_NAME = "OmniPlayer"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 DEFAULT_ALBUM = "Final Fantasy XI"
 NAMES_FILE = "bgw_names.json"
@@ -2562,10 +2562,19 @@ def run_app():
                 GWLP_WNDPROC, WM_NCCALCSIZE = -4, 0x0083
                 old = getp(hwnd, GWLP_WNDPROC)
 
+                u32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT,
+                                               wintypes.WPARAM, wintypes.LPARAM]
+                u32.DefWindowProcW.restype = LRESULT
+
                 def proc(h, msg, wp, lp):
-                    if msg == WM_NCCALCSIZE and wp:
-                        return 0          # no title bar, no border: all client
-                    return u32.CallWindowProcW(old, h, msg, wp, lp)
+                    # Runs for every message the window gets, so it must never let
+                    # an exception escape into Windows.
+                    try:
+                        if msg == WM_NCCALCSIZE and wp:
+                            return 0      # no title bar, no border: all client
+                        return u32.CallWindowProcW(old, h, msg, wp, lp)
+                    except Exception:
+                        return u32.DefWindowProcW(h, msg, wp, lp)
 
                 cb = WNDPROC(proc)
                 # Keep every hook alive: Windows may still call an older one.
@@ -2630,8 +2639,44 @@ def run_app():
         def _move_start(self, e):
             if self._maxed:
                 return "break"
+            # On Windows, hand the drag to Windows itself, exactly as if the title
+            # bar had been grabbed: the system moves the whole window in one piece
+            # with the mouse, so the contents can't trail behind the frame. (Moving
+            # it from Tk, one geometry change per mouse event, is what drifted.)
+            # The mini player keeps Tk's own move so Windows can't snap it to half
+            # the screen.
+            hwnd = getattr(self, "_hooked_hwnd", None)
+            if sys.platform == "win32" and hwnd and not self.mini:
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    u32 = ctypes.windll.user32
+                    u32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT,
+                                                 wintypes.WPARAM, wintypes.LPARAM]
+                    u32.ReleaseCapture()
+                    # POSTED, not sent: Windows' drag runs its own loop until the
+                    # button is let go, and running that loop from inside this Tk
+                    # callback re-entered Tk underneath Python and crashed. Posted,
+                    # it starts a moment later from Tk's own message loop instead.
+                    u32.PostMessageW(hwnd, 0x00A1, 2, 0)    # WM_NCLBUTTONDOWN, HTCAPTION
+                    self._drag = None
+                    return "break"
+                except Exception:
+                    pass
             self._drag = (e.x_root - self.root.winfo_x(), e.y_root - self.root.winfo_y())
             return "break"
+
+        def _check_snapped(self):
+            """If Windows maximised the window (dragged to the top of the screen),
+            swap that for OmniPlayer's own maximise: Windows' version would push
+            the edges a few pixels off the screen, since its frame is hidden."""
+            try:
+                if self.mini or self.root.state() != "zoomed":
+                    return
+            except tk.TclError:
+                return
+            self.root.state("normal")            # back to the size it had before
+            self.root.after(20, lambda: None if self._maxed else self.toggle_max())
 
         def _move_drag(self, e):
             d = getattr(self, "_drag", None)
@@ -3438,6 +3483,7 @@ def run_app():
         def tick(self):
             e = self.engine
             if sys.platform == "win32":
+                self._check_snapped()        # Windows' snap-maximise -> ours
                 self._hook_frame()           # cheap; re-hooks a rebuilt window
                 self._round_corners()        # likewise
             try:
