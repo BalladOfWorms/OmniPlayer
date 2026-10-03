@@ -48,7 +48,7 @@ import time
 import wave
 
 APP_NAME = "OmniPlayer"
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 
 DEFAULT_ALBUM = "Final Fantasy XI"
 NAMES_FILE = "bgw_names.json"
@@ -1022,8 +1022,21 @@ class Library:
 
     def _rebuild(self):
         rm = self.removed
-        self.tracks = [t for f in self.folders for t in f.tracks
-                       if os.path.normcase(t.path) not in rm]
+        tracks = [t for f in self.folders for t in f.tracks
+                  if os.path.normcase(t.path) not in rm]
+        # The game ships a couple of pieces twice (Zilart's Grav'iton and Revenant
+        # Maiden turn up again as Promathia files). When both copies are here,
+        # list only the first; a copy you've renamed yourself is always shown.
+        hide = set()
+        groups = {}
+        for t in tracks:
+            if t.cat and not self.meta(t).get("name"):
+                groups.setdefault(t.cat[1].lower(), []).append(t)
+        for same in groups.values():
+            if len(same) > 1:
+                keep = min(same, key=lambda t: t.number if t.number is not None else 1e9)
+                hide.update(id(t) for t in same if t is not keep)
+        self.tracks = [t for t in tracks if id(t) not in hide]
 
     def remove_tracks(self, tracks):
         """Take tracks off the list. A folder left with nothing on the list

@@ -1,3 +1,12 @@
+## OmniPlayer v1.0.3
+
+### Fixed
+
+- **Grav'iton and Revenant Maiden are listed once.** Each appears a single time
+  even when both of the game's copies are in your library.
+
+---
+
 ## OmniPlayer v1.0.2
 
 ### Fixed
