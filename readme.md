@@ -1,3 +1,10 @@
+<img width="594" height="645" alt="Screenshot 2026-10-02 154945" src="https://github.com/user-attachments/assets/1f63340c-5798-4063-8617-2378daae4312" />
+<img width="592" height="644" alt="Screenshot 2026-10-02 155000" src="https://github.com/user-attachments/assets/7dbcbb1a-8446-423c-a564-c932b4f703ac" />
+<img width="444" height="169" alt="Screenshot 2026-10-02 155035" src="https://github.com/user-attachments/assets/a4fb58e5-85b3-4061-b4f1-043b93fda0ee" />
+
+
+
+
 # OmniPlayer
 
 A small, dark-themed music player for **FINAL FANTASY XI**'s soundtrack files (`.bgw`), by **BalladOfWorms**.
